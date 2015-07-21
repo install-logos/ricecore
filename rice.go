@@ -1,20 +1,26 @@
 package ricecore
 
 import (
+    "errors"
 	"encoding/json"
 	"os"
 	"os/user"
 )
 
 var rdbDir string
+var homeDir string
 
-//A rice object represents a rice object
-//The name
+//A rice struct represents a rice with its files and other basic info
 type Rice struct {
     Name    string `json:"name"`
 	Program string `json:"prog"`
 	Root    string `json:"root"`
-	Files   map[string]string `json:"files"`
+	Files   []*RiceFile `json:"files"`
+}
+
+type RiceFile struct {
+    Location string `json:"location"`
+    File     string `json:"file"`
 }
 
 //A package object represents a package object which will be used for querys
@@ -31,12 +37,12 @@ type Package struct {
 //Initializes ricecore, setting global variables, etc.
 func InitCore() {
 	usr, _ := user.Current()
-	dir := usr.HomeDir
-	rdbDir = dir + "/.rdb/"
+	homeDir = usr.HomeDir
+	rdbDir = homeDir + "/.rdb/"
 }
 
 //Creates a rice and stores the information as a json
-func CreateRice(name string, prog string, root string, files map[string]string) (rice *Rice, err error) {
+func CreateRice(name string, prog string, root string, files []*RiceFile) (rice *Rice, err error) {
 	rice = &Rice{Name: name, Program: prog, Root: root, Files: files}
 
 	jsonData, err := json.MarshalIndent(rice, "", "  ")
@@ -46,7 +52,7 @@ func CreateRice(name string, prog string, root string, files map[string]string) 
 
 	riceDir := rdbDir + prog + "/" + name + "/"
 	if !exists(riceDir) {
-		os.MkdirAll(riceDir, 0764)
+		os.MkdirAll(riceDir, 0664)
 	}
 
 	jsonFile, err := os.Create(riceDir + "rice.json")
@@ -79,15 +85,25 @@ func GetRice(name string, prog string) (rice *Rice, err error) {
     return rice, nil
 }
 
-func exists(path string) bool {
-	_, err := os.Stat(path)
+//Initializes a created local rice, extracting the files from the directory to 
+//the rdb dir and symlinking them back
 
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
+func (rice Rice) InitLocalRice() (err error){
+	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
+	progDir := expandDir(rice.Root)
 
-	return true
+    if err:= os.Chdir(riceDir); err != nil {
+        return errors.New("Error, this rice was not created properly")
+    }
+
+    for _, rf := range rice.Files {
+        if !exists(rf.Location){
+            os.MkdirAll(rf.Location, 0664)
+        }
+
+        if err = os.Rename(progDir + rf.Location + rf.File, riceDir + rf.Location + rf.File); err != nil {
+            return errors.New("Error, this rice was not initialized properly: File: " + rf.Location + rf.File + " was not properly moved. Additional info: " + err.Error())
+        }
+    }
+    return nil
 }
