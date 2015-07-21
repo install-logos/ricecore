@@ -1,8 +1,8 @@
 package ricecore
 
 import (
-    "os"
-    "strings"
+	"os"
+	"strings"
 )
 
 func exists(path string) bool {
@@ -19,9 +19,9 @@ func exists(path string) bool {
 }
 
 func expandDir(path string) string {
-    path = strings.Replace(path, "~", homeDir, 1)
-    if path[len(path) - 1:] != "/" {
-        return path + "/"
-    }
-    return path
+	path = strings.Replace(path, "~", homeDir, 1)
+	if path[len(path)-1:] != "/" {
+		return path + "/"
+	}
+	return path
 }
