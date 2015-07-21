@@ -23,17 +23,6 @@ type RiceFile struct {
     File     string `json:"file"`
 }
 
-//A package object represents a package object which will be used for querys
-//and uploads. Essentially, packages are stored online, rices are stored locally
-type Package struct {
-	Name       string
-	Desc       string
-	Author     string
-	Screenshot string
-	Program    string
-	URL        string
-}
-
 //Initializes ricecore, setting global variables, etc.
 func InitCore() {
 	usr, _ := user.Current()
@@ -87,7 +76,6 @@ func GetRice(name string, prog string) (rice *Rice, err error) {
 
 //Initializes a created local rice, extracting the files from the directory to 
 //the rdb dir and symlinking them back
-
 func (rice Rice) InitLocalRice() (err error){
 	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
 	progDir := expandDir(rice.Root)
@@ -98,12 +86,34 @@ func (rice Rice) InitLocalRice() (err error){
 
     for _, rf := range rice.Files {
         if !exists(rf.Location){
-            os.MkdirAll(rf.Location, 0664)
+            os.MkdirAll(rf.Location, 0755)
         }
 
         if err = os.Rename(progDir + rf.Location + rf.File, riceDir + rf.Location + rf.File); err != nil {
             return errors.New("Error, this rice was not initialized properly: File: " + rf.Location + rf.File + " was not properly moved. Additional info: " + err.Error())
         }
     }
+    return nil
+}
+
+//Installs a Rice by symlinking the files into the specified dirs
+func (rice Rice) InstallRice() (err error) {
+	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
+	progDir := expandDir(rice.Root)
+
+    if err:= os.Chdir(riceDir); err != nil {
+        return errors.New("Error, this rice does not exist")
+    }
+
+    for _, rf := range rice.Files {
+        if !exists(progDir + rf.Location){
+            os.MkdirAll(progDir + rf.Location, 0755)
+        }
+
+        if err = os.Symlink(riceDir + rf.Location + rf.File, progDir + rf.Location + rf.File); err != nil {
+            return errors.New("Error, this rice was not symlinked properly: File: " + rf.Location + rf.File + " was not properly symlinked. Additional info: " + err.Error())
+        }
+    }
+
     return nil
 }
