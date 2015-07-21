@@ -3,8 +3,8 @@ package ricecore
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"os"
-    "io/ioutil"
 )
 
 //A rice struct represents a rice with its files and other basic info
@@ -15,6 +15,8 @@ type Rice struct {
 	Files   []*RiceFile `json:"files"`
 }
 
+//A ricefile struct is a file within a rice. It contains the files and
+//their respective locations
 type RiceFile struct {
 	Location string `json:"location"`
 	File     string `json:"file"`
@@ -31,7 +33,7 @@ func CreateRice(name string, prog string, root string, files []*RiceFile) (rice 
 
 	riceDir := rdbDir + prog + "/" + name + "/"
 	if !exists(riceDir) {
-		os.MkdirAll(riceDir, 0664)
+		os.MkdirAll(riceDir, 0775)
 	}
 
 	jsonFile, err := os.Create(riceDir + "rice.json")
@@ -52,7 +54,7 @@ func GetRice(name string, prog string) (rice *Rice, err error) {
 	if err != nil {
 		return nil, err
 	}
-    defer jsonFile.Close()
+	defer jsonFile.Close()
 
 	rice = new(Rice)
 
@@ -66,15 +68,29 @@ func GetRice(name string, prog string) (rice *Rice, err error) {
 
 //Returns the currently active rice for a program
 func GetActiveRice(prog string) (rice *Rice, err error) {
-    progDir := rdbDir + prog + "/"
+	progDir := rdbDir + prog + "/"
 
-    s, err := ioutil.ReadFile(progDir + ".active")
+	s, err := ioutil.ReadFile(progDir + ".active")
+	if err != nil {
+		return nil, errors.New("Error, the .active file does not exist for this program.")
+	}
+
+	rname := string(s)
+	return GetRice(rname, prog)
+}
+
+//Deactivates the currently active rice for a program
+func DeactivateCurrentRice(prog string) (err error) {
+    crice, err := GetActiveRice(prog)
     if err != nil {
-        return nil, errors.New("Error, the .active file does not exist for this program.")
+        return err
     }
 
-    rname := string(s)
-    return GetRice(rname, prog)
+    if err = crice.deactivate(); err != nil {
+        return err
+    }
+
+    return nil
 }
 
 //Initializes a created local rice, extracting the files from the directory to
@@ -83,13 +99,9 @@ func (rice Rice) LocalInit() (err error) {
 	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
 	progDir := expandDir(rice.Root)
 
-	if err := os.Chdir(riceDir); err != nil {
-		return errors.New("Error, this rice was not created properly")
-	}
-
 	for _, rf := range rice.Files {
-		if !exists(rf.Location) {
-			os.MkdirAll(rf.Location, 0755)
+		if !exists(riceDir + rf.Location) {
+			os.MkdirAll(riceDir + rf.Location, 0755)
 		}
 
 		if err = os.Rename(progDir+rf.Location+rf.File, riceDir+rf.Location+rf.File); err != nil {
@@ -98,6 +110,7 @@ func (rice Rice) LocalInit() (err error) {
 	}
 	return nil
 }
+
 
 //Activates a Rice by symlinking the files into the specified dirs
 func (rice Rice) Activate() (err error) {
@@ -113,16 +126,19 @@ func (rice Rice) Activate() (err error) {
 			return errors.New("Error, this rice was not symlinked properly: File: " + rf.Location + rf.File + " was not properly symlinked. Additional info: " + err.Error())
 		}
 	}
-    activeRice := []byte(rice.Name)
-    if err = ioutil.WriteFile(rdbDir + rice.Program + "/.active", activeRice, 0755); err != nil {
-        return errors.New("Error, the .active file could not be created properly. Additional info: " + err.Error())
-    }
+	activeRice := []byte(rice.Name)
+	if err = ioutil.WriteFile(rdbDir+rice.Program+"/.active", activeRice, 0755); err != nil {
+		return errors.New("Error, the .active file could not be created properly. Additional info: " + err.Error())
+	}
 
 	return nil
 }
 
 //Deactivates a rice by deleting all specified symlinks for that rice.
-func (rice Rice) Deactivate() (err error) {
+//Not publicly available because it would be another dumb thing to
+//screw up. DeactivateCurrentRice should be used publicly
+func (rice Rice) deactivate() (err error) {
+    activeFile := rdbDir + rice.Program + "/.active"
 	progDir := expandDir(rice.Root)
 
 	for _, rf := range rice.Files {
@@ -135,23 +151,52 @@ func (rice Rice) Deactivate() (err error) {
 		}
 	}
 
+    if exists(activeFile) {
+        if err = os.Remove(activeFile); err != nil {
+            return errors.New("Error, could not remove .active file. Additional info: " + err.Error())
+        }
+    }
+
 	return nil
 }
 
 //Swaps in a rice by deactivating the currently active rice
 //and activating the given rice
-func (rice Rice) SwapRice() (err error) {
-    crice, err := GetActiveRice(rice.Program)
-    if err != nil {
-        return err
-    }
-    if err = crice.Deactivate(); err != nil {
-        return err
+func (rice Rice) Swap() (err error) {
+    if err := DeactivateCurrentRice(rice.Program); err != nil {
+		return err
     }
 
-    if err = rice.Activate(); err != nil {
-        return err
+	if err = rice.Activate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//Uninstalls a rice for a program, deleting the symlinks
+//and moving the files back to their original locations
+func (rice Rice) Uninstall() (err error) {
+    //Deactivates any active rice
+    DeactivateCurrentRice(rice.Program)
+
+	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
+	progDir := expandDir(rice.Root)
+
+	for _, rf := range rice.Files {
+		if !exists(progDir + rf.Location) {
+			os.MkdirAll(progDir + rf.Location, 0755)
+		}
+
+        //Do better safety here, possibly use copys(these are more painful)
+		if err = os.Rename(riceDir+rf.Location+rf.File, progDir+rf.Location+rf.File); err != nil {
+			return errors.New("Error, this rice was not uninstalled properly: File: " + rf.Location + rf.File + " was not properly moved. Additional info: " + err.Error())
+		}
+	}
+
+    if err = os.RemoveAll(riceDir); err != nil {
+        return errors.New("Error, the remaining files could not be removed. Additional info: " + err.Error())
     }
 
-    return nil
+	return nil
 }

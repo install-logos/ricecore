@@ -1,7 +1,7 @@
 package ricecore
 
 import (
-    "os/user"
+	"os/user"
 )
 
 var rdbDir string
