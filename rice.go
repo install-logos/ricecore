@@ -4,12 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"os/user"
     "io/ioutil"
 )
-
-var rdbDir string
-var homeDir string
 
 //A rice struct represents a rice with its files and other basic info
 type Rice struct {
@@ -22,13 +18,6 @@ type Rice struct {
 type RiceFile struct {
 	Location string `json:"location"`
 	File     string `json:"file"`
-}
-
-//Initializes ricecore, setting global variables, etc.
-func InitCore() {
-	usr, _ := user.Current()
-	homeDir = usr.HomeDir
-	rdbDir = homeDir + "/.rdb/"
 }
 
 //Creates a rice and stores the information as a json
@@ -90,7 +79,7 @@ func GetActiveRice(prog string) (rice *Rice, err error) {
 
 //Initializes a created local rice, extracting the files from the directory to
 //the rdb dir and symlinking them back
-func (rice Rice) InitLocalRice() (err error) {
+func (rice Rice) LocalInit() (err error) {
 	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
 	progDir := expandDir(rice.Root)
 
@@ -111,7 +100,7 @@ func (rice Rice) InitLocalRice() (err error) {
 }
 
 //Activates a Rice by symlinking the files into the specified dirs
-func (rice Rice) ActivateRice() (err error) {
+func (rice Rice) Activate() (err error) {
 	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
 	progDir := expandDir(rice.Root)
 
@@ -133,7 +122,7 @@ func (rice Rice) ActivateRice() (err error) {
 }
 
 //Deactivates a rice by deleting all specified symlinks for that rice.
-func (rice Rice) DeactivateRice() (err error) {
+func (rice Rice) Deactivate() (err error) {
 	progDir := expandDir(rice.Root)
 
 	for _, rf := range rice.Files {
@@ -147,4 +136,22 @@ func (rice Rice) DeactivateRice() (err error) {
 	}
 
 	return nil
+}
+
+//Swaps in a rice by deactivating the currently active rice
+//and activating the given rice
+func (rice Rice) SwapRice() (err error) {
+    crice, err := GetActiveRice(rice.Program)
+    if err != nil {
+        return err
+    }
+    if err = crice.Deactivate(); err != nil {
+        return err
+    }
+
+    if err = rice.Activate(); err != nil {
+        return err
+    }
+
+    return nil
 }
