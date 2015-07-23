@@ -15,8 +15,8 @@ type Rice struct {
 	Files   []*RiceFile `json:"files"`
 }
 
-//A ricefile struct is a file within a rice. It contains the files and
-//their respective locations
+//A ricefile struct is a file within a rice. It contains the file name and
+//its respective location
 type RiceFile struct {
 	Location string `json:"location"`
 	File     string `json:"file"`
