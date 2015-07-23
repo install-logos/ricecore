@@ -32,3 +32,46 @@ func TestCreate(t *testing.T) {
         t.Error(err.Error())
     }
 }
+
+func TestActivate(t *testing.T) {
+    r, err := GetRice("test", "test-prog")
+    if err != nil {
+        t.Error(err.Error())
+    }
+
+    if err = r.Activate(); err != nil {
+        t.Error(err.Error())
+    }
+}
+
+func TestGetActiveRice(t *testing.T) {
+    _, err := GetActiveRice("test-prog")
+    if err != nil {
+        t.Error(err.Error())
+    }
+}
+
+func TestDeactivate(t *testing.T) {
+    if err := DeactivateCurrentRice("test-prog"); err != nil {
+        t.Error(err.Error())
+    }
+}
+
+func TestUninstall(t *testing.T) {
+    r, err := GetRice("test", "test-prog")
+    if err != nil {
+        t.Error(err.Error())
+    }
+
+    if err = r.Uninstall(); err != nil {
+        t.Error(err.Error())
+    }
+}
+
+func TestQuery(t *testing.T) {
+    _, err := QueryPackages("logos")
+    if err != nil {
+        t.Error(err.Error())
+    }
+    //TODO: Validate results
+}
