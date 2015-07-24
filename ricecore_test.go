@@ -115,9 +115,9 @@ func TestDownload(t *testing.T) {
 		t.Error(err.Error())
 	}
 	//TODO: Validate results
-    r := *res
-    _, err = r[0].Download()
-    if err != nil {
+	r := *res
+	_, err = r[0].Download()
+	if err != nil {
 		t.Error(err.Error())
-    }
+	}
 }

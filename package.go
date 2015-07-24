@@ -96,17 +96,17 @@ func (pack Package) Upload() (err error) {
 }
 
 //Downloads a package and returns the rice
-func (pack Package) Download() (rice *Rice, err error){
+func (pack Package) Download() (rice *Rice, err error) {
 	riceDir := rdbDir + pack.Program + "/" + pack.Name + "/"
 
-    cmd := "git"
-    args := []string{"clone", pack.URL, riceDir}
-    if err := exec.Command(cmd, args...).Run(); err != nil {
-        return nil, errors.New("Error, could not perform a git clone! Additional info: " + err.Error())
-    }
-    rice, err = GetRice(pack.Name, pack.Program)
-    if err != nil {
-        return nil, err
-    }
-    return rice, nil
+	cmd := "git"
+	args := []string{"clone", pack.URL, riceDir}
+	if err := exec.Command(cmd, args...).Run(); err != nil {
+		return nil, errors.New("Error, could not perform a git clone! Additional info: " + err.Error())
+	}
+	rice, err = GetRice(pack.Name, pack.Program)
+	if err != nil {
+		return nil, err
+	}
+	return rice, nil
 }
