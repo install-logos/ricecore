@@ -51,6 +51,12 @@ func TestGetActiveRice(t *testing.T) {
 	}
 }
 
+func TestDeactivate(t *testing.T) {
+	if err := DeactivateCurrentRice("test-prog"); err != nil {
+		t.Error(err.Error())
+	}
+}
+
 func TestCreate2(t *testing.T) {
 	os.Mkdir(homeDir+"/test2/", 0755)
 	testFileCont := []byte("le second test")
@@ -62,7 +68,7 @@ func TestCreate2(t *testing.T) {
 	files = make([]*RiceFile, 1)
 	f1 := &RiceFile{Location: "./", File: "test2"}
 	files[0] = f1
-	_, err := CreateRice("test2", "test-prog", "~/test2/", files)
+	_, err := CreateRice("test2", "test-prog", "~/test/", files)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -76,18 +82,12 @@ func TestCreate2(t *testing.T) {
 }
 
 func TestSwap(t *testing.T) {
-	r, err := GetActiveRice("test-prog")
-    if err != nil {
-        t.Error(err.Error())
-    }
-
-    r.Swap()
-}
-
-func TestDeactivate(t *testing.T) {
-	if err := DeactivateCurrentRice("test-prog"); err != nil {
+	r, err := GetRice("test2", "test-prog")
+	if err != nil {
 		t.Error(err.Error())
 	}
+
+	r.Swap()
 }
 
 func TestUninstall(t *testing.T) {
@@ -107,4 +107,17 @@ func TestQuery(t *testing.T) {
 		t.Error(err.Error())
 	}
 	//TODO: Validate results
+}
+
+func TestDownload(t *testing.T) {
+	res, err := QueryPackages("test")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	//TODO: Validate results
+    r := *res
+    _, err = r[0].Download()
+    if err != nil {
+		t.Error(err.Error())
+    }
 }

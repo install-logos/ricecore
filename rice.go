@@ -112,7 +112,7 @@ func (rice Rice) FirstInit() (err error) {
 	return nil
 }
 
-func (rice Rice) LocalInit(riceLoc string) (err error){
+func (rice Rice) LocalInit(riceLoc string) (err error) {
 	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
 	progDir := expandDir(riceLoc)
 
