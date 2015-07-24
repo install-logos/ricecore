@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 )
 
 //A package object represents a package object which will be used for querys
@@ -40,14 +41,6 @@ func QueryPackages(keyword string) (qRes *QueryResult, err error) {
 	}
 
 	return qRes, nil
-}
-
-//Uploads a package to the ricebe server
-func (pack Package) Upload() (err error) {
-	resp, err := http.Post("http://rice.kagayaite.com/upload?upstream="+pack.URL, "text", nil)
-	response, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(response)
-	return nil
 }
 
 //Loads a package.json file for an existing rice and returns the struct
@@ -92,4 +85,28 @@ func CreatePackage(rice *Rice, desc string, author string, screenshot string, ur
 
 	jsonFile.Write(jsonData)
 	return pack, nil
+}
+
+//Uploads a package to the ricebe server
+func (pack Package) Upload() (err error) {
+	resp, err := http.Post("http://rice.kagayaite.com/upload?upstream="+pack.URL, "text", nil)
+	response, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(response)
+	return nil
+}
+
+//Downloads a package and returns the rice
+func (pack Package) Download() (rice *Rice, err error) {
+	riceDir := rdbDir + pack.Program + "/" + pack.Name + "/"
+
+	cmd := "git"
+	args := []string{"clone", pack.URL, riceDir}
+	if err := exec.Command(cmd, args...).Run(); err != nil {
+		return nil, errors.New("Error, could not perform a git clone! Additional info: " + err.Error())
+	}
+	rice, err = GetRice(pack.Name, pack.Program)
+	if err != nil {
+		return nil, err
+	}
+	return rice, nil
 }

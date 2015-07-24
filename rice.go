@@ -94,10 +94,27 @@ func DeactivateCurrentRice(prog string) (err error) {
 }
 
 //Initializes a created local rice, extracting the files from the directory to
-//the rdb dir and symlinking them back
-func (rice Rice) LocalInit() (err error) {
+//the rdb dir. Should be used to intialize a rice the first time
+//for a given prgoram.
+func (rice Rice) FirstInit() (err error) {
 	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
 	progDir := expandDir(rice.Root)
+
+	for _, rf := range rice.Files {
+		if !exists(riceDir + rf.Location) {
+			os.MkdirAll(riceDir+rf.Location, 0755)
+		}
+
+		if err = os.Rename(progDir+rf.Location+rf.File, riceDir+rf.Location+rf.File); err != nil {
+			return errors.New("Error, this rice was not initialized properly: File: " + rf.Location + rf.File + " was not properly moved. Additional info: " + err.Error())
+		}
+	}
+	return nil
+}
+
+func (rice Rice) LocalInit(riceLoc string) (err error) {
+	riceDir := rdbDir + rice.Program + "/" + rice.Name + "/"
+	progDir := expandDir(riceLoc)
 
 	for _, rf := range rice.Files {
 		if !exists(riceDir + rf.Location) {
